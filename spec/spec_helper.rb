@@ -11,11 +11,15 @@ class LogFile < EM::Connection
   end
 
   def notify_readable
-    data = @io.readline
-    @messages << data.rstrip if data
-    set_deferred_status :succeeded
+    begin
+      loop do
+        data = @io.readline
+        @messages << data.rstrip if data
+      end
     rescue EOFError
+      set_deferred_status :succeeded if @messages.size > 0
       true
+    end
   end
 
   def pop(&blk)
@@ -29,7 +33,6 @@ class LogFile < EM::Connection
 
 end
 
-
 module EM
   module Spec
     module Analogger
@@ -39,24 +42,28 @@ module EM
       @@tmpio = nil
       @@log = nil
 
-      def self.log
+      def self.logfile
         @@log
       end
 
-      def self.close
+      def self.shutdown_reactor
         done
       end
 
-      def self.server_start
+      def self.server_conf
+        config={}
+        config[Swiftcore::Analogger::Cport] = 6766
+        config[Swiftcore::Analogger::Cdefault_log] = @@logfile
+        config[Swiftcore::Analogger::Csyncinterval] = 1
+        config[Swiftcore::Analogger::Cinterval] = 1 
+        config
+      end
+
+      def self.server(start_server = true)
         File.open(@@logfile, File::TRUNC|File::CREAT).close
         @@tmpfd = IO.sysopen(@@logfile)
         em do
-          config={}
-          config[Swiftcore::Analogger::Cport] = 6766
-          config[Swiftcore::Analogger::Cdefault_log] = @@logfile
-          config[Swiftcore::Analogger::Csyncinterval] = 1
-          config[Swiftcore::Analogger::Cinterval] = 1 
-          Swiftcore::Analogger.start(config)
+          Swiftcore::Analogger.start(self.server_conf) if start_server
 
           @@log = EM.watch(IO.for_fd(@@tmpfd), LogFile)
           @@log.notify_readable = true

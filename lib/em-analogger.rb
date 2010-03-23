@@ -15,13 +15,13 @@ module EventMachine
       Cauthentication = 'authentication'.freeze
       Ci = 'i'.freeze
 
-      attr_accessor :key, :host, :port, :msg_queue, :connected, :sender,
+      attr_accessor :key, :host, :port, :buffer, :connected, :sender,
                     :reconnect_in
 
       def self.connect(service = 'default', host = '127.0.0.1', port = 6766, opts = {})
         connection = ::EventMachine.connect(host, port.to_i, self) do |conn|
           conn.connected    = false
-          conn.msg_queue  ||= ''
+          conn.buffer     ||= ''
           conn.service      = service
           conn.host         = host
           conn.port         = port
@@ -31,12 +31,14 @@ module EventMachine
       end
       
       def post_init
+        @connected = false
+        @buffer    = ''
       end
 
       def connection_completed
         @connected = true
         log(Cauthentication,"#{@key}",true)
-        send_data @msg_queue
+        send_data @buffer
       end
 
       def service
@@ -69,11 +71,11 @@ module EventMachine
         elsif @connected
           send_data fullmsg
         else
-          @msg_queue << fullmsg
+          @buffer << fullmsg
         end
       rescue Exception => e
         puts e
-        @msg_queue << fullmsg if msg and severity
+        @buffer << fullmsg if msg and severity
         false
       end
 
