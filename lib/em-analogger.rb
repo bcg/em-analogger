@@ -3,9 +3,9 @@ require 'eventmachine'
 
 module EventMachine
   module Analogger
-    VERSION      = '0.0.1'
-    DEF_IP   = '127.0.0.1'
-    DEF_PORT = 6766
+    VERSION     = '0.1.1'
+    DEF_IP      = '127.0.0.1'
+    DEF_PORT    = 6766
     
     def self.new(service = 'default', host = DEF_IP, port = DEF_PORT, opts = {}) 
       EventMachine::Analogger::Connection.connect(service, host, port, opts)
@@ -30,11 +30,6 @@ module EventMachine
         end
       end
       
-      def post_init
-        @connected = false
-        @buffer    = ''
-      end
-
       def connection_completed
         @connected = true
         log(Cauthentication,"#{@key}",true)
